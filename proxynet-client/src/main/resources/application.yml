@@ -31,8 +31,8 @@ spring:
       max-request-size: 10MB
   main:
     allow-circular-references: true
-    
-    
+
+
 proxynet:
   client:
     id: 1

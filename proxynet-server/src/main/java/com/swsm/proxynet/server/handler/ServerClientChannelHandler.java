@@ -17,7 +17,9 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+
 import java.util.List;
+
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -26,7 +28,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class ServerClientChannelHandler extends SimpleChannelInboundHandler<ProxyNetMessage> {
-    
+
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -48,7 +50,7 @@ public class ServerClientChannelHandler extends SimpleChannelInboundHandler<Prox
         boolean isSuccess = connectRespMessage.getResult();
         log.info("客户端与目标服务连接结果={}", connectRespMessage);
         if (!isSuccess) {
-            log.info("客户端与目标服务连接没有成功，关闭所有连接此目标服务的channel", connectRespMessage);
+            log.info("客户端与目标服务连接没有成功，关闭所有连接此目标服务的channel:{}", connectRespMessage);
             List<Channel> userChannelList = ChannelRelationCache.getUserChannelList(clientChannel.id());
             for (Channel channel : userChannelList) {
                 channel.close();
@@ -88,7 +90,6 @@ public class ServerClientChannelHandler extends SimpleChannelInboundHandler<Prox
             ByteBuf buf = channelHandlerContext.alloc().buffer(proxyNetMessage.getData().length);
             buf.writeBytes(proxyNetMessage.getData());
             userChannel.writeAndFlush(buf);
-            
         }
     }
 
@@ -113,7 +114,7 @@ public class ServerClientChannelHandler extends SimpleChannelInboundHandler<Prox
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        
+
     }
 
     @Override

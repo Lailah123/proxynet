@@ -23,17 +23,21 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class ClientServerChannelHandler extends SimpleChannelInboundHandler<ProxyNetMessage> {
-    
+
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, ProxyNetMessage proxyNetMessage) throws Exception {
         if (proxyNetMessage.getType() == ProxyNetMessage.CONNECT) {
+            log.info("---------------------------------------------------------------------------------");
+            log.info("客户端服务建立连接，channel:{}", channelHandlerContext.channel());
             executeConnect(proxyNetMessage, channelHandlerContext);
         } else if (proxyNetMessage.getType() == ProxyNetMessage.COMMAND) {
+            log.info("客户端服务执行命令，channel:{}", channelHandlerContext.channel());
             executeCommand(proxyNetMessage, channelHandlerContext);
         }
     }
 
     private void executeCommand(ProxyNetMessage proxyNetMessage, ChannelHandlerContext channelHandlerContext) {
+//        log.info("命令内容：{}", proxyNetMessage.getInfo());
         Channel clientChannel = channelHandlerContext.channel();
         CommandMessage commandMessage = JSON.parseObject(proxyNetMessage.getInfo(), CommandMessage.class);
         if (ProxyNetMessage.COMMAND_INFO.equals(commandMessage.getType())) {
@@ -51,23 +55,26 @@ public class ClientServerChannelHandler extends SimpleChannelInboundHandler<Prox
 
     private void executeConnect(ProxyNetMessage proxyNetMessage, ChannelHandlerContext channelHandlerContext) {
         ConnectMessage connectMessage = JSON.parseObject(proxyNetMessage.getInfo(), ConnectMessage.class);
-        log.info("收到服务端发送的connect消息:{}", proxyNetMessage);
-        log.info("向目标服务={}发起连接...", proxyNetMessage);
+        log.info("收到客户端服务发送的connect消息:{}", proxyNetMessage);
+//        log.info("向目标服务={}发起连接...", proxyNetMessage);
         try {
             SpringInitRunner.bootstrapForTarget.connect(connectMessage.getTargetIp(), connectMessage.getTargetPort())
                     .addListener((ChannelFutureListener) future -> {
                         Channel targetChannel = future.channel();
                         if (future.isSuccess()) {
                             targetChannel.config().setOption(ChannelOption.AUTO_READ, false);
-                            log.info("向目标服务={}发起连接 成功...", proxyNetMessage);
+//                            log.info("向目标服务={}发起连接 成功...", proxyNetMessage);
 
                             String serverIp = ConfigUtil.getServerIp();
                             int serverPort = ConfigUtil.getServerPort();
+                            log.info("连接服务端：{}:{}", ConfigUtil.getServerIp(), ConfigUtil.getServerPort());
                             SpringInitRunner.bootstrapForServer.connect(serverIp, serverPort)
                                     .addListener((ChannelFutureListener) future2 -> {
                                         if (future2.isSuccess()) {
+                                            log.info("服务端连接成功");
+                                            log.info("------------------------------------------------------------------------------");
                                             Channel newClientChannel = future2.channel();
-                                            log.info("监控--clinetChannelId={},newClientChannelId={},realServerChannelId={},visitorId={}", channelHandlerContext.channel().id().asShortText(), newClientChannel.id().asLongText(),targetChannel.id().asShortText(), connectMessage.getUserId());
+//                                            log.info("监控--clientChannelId={},newClientChannelId={},realServerChannelId={},visitorId={}", channelHandlerContext.channel().id().asShortText(), newClientChannel.id().asLongText(), targetChannel.id().asShortText(), connectMessage.getUserId());
                                             newClientChannel.attr(Constants.NEXT_CHANNEL).set(targetChannel);
                                             targetChannel.attr(Constants.NEXT_CHANNEL).set(newClientChannel);
                                             ChannelRelationCache.putUserIdToTargetChannel(connectMessage.getUserId(), targetChannel);
@@ -79,7 +86,7 @@ public class ClientServerChannelHandler extends SimpleChannelInboundHandler<Prox
                                             channelHandlerContext.close();
                                         }
                                     });
-                            
+
                             ChannelRelationCache.putTargetChannel(connectMessage.getTargetIp(), connectMessage.getTargetPort(), targetChannel);
                             ChannelRelationCache.putUserIdToTargetChannel(connectMessage.getUserId(), targetChannel);
                         } else {
@@ -96,13 +103,13 @@ public class ClientServerChannelHandler extends SimpleChannelInboundHandler<Prox
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        
+
     }
 
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        
+
     }
 
     @Override
